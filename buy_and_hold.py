@@ -1,6 +1,8 @@
 from datetime import date
 import pandas as pd
 import yfinance as yf
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 class Bar:
@@ -61,28 +63,52 @@ def run(df, start_date, end_date, increment, date_increment, fees):
 
 
 if __name__ == '__main__':
-    ticker = 'SPY'  # Тикер финансового инструмента как он отображается на Yahoo Finnce
+    # BRK-B IJH SPY AAPL
+    ticker = 'SPY'  # Тикер финансового инструмента как он отображается на Yahoo Finance
+    increment: int = 100  # Сумма ежемесячного инвестирования
+    date_increment: int = 15  # Дата пополнения(число месяца)
+    year_invest: int = 10  # Количество лет инвестирования
+    fees = 0.0006  # 0.05% комиссия брокера ВТБ + 0.01% комиссия биржи
 
-    df_full = yf.download(ticker)  # Загрузка данных с Yahoo Finance
-    df_full = df_full.drop(columns=['Adj Close', 'Volume'])  # Удаляем ненужные колонки
+    df_ticker = yf.download(ticker)  # Загрузка данных с Yahoo Finance
+    df_ticker = df_ticker.drop(columns=['Adj Close', 'Volume'])  # Удаляем ненужные колонки
+
+    df_rez_ticker = pd.DataFrame()
 
     for year in range(1993, 2022):
-        increment: int = 100  # Сумма ежемесячного инвестирования
-        date_increment: int = 15  # Дата пополнения(число месяца)
         start_date: date = date(year, 1, 1)  # Дата старта инвестирования(год, месяц, число)
-        year_invest: int = 10  # Количество лет инвестирования
-        fees = 0.0006  # 0.05% комиссия брокера ВТБ + 0.01% комиссия биржи
-
         end_date = date(start_date.year + year_invest, start_date.month, start_date.day)
 
-        rez = run(df_full, start_date, end_date, increment, date_increment, fees)
+        rez = run(df_ticker, start_date, end_date, increment, date_increment, fees)
 
-        print(f'Год начала инвестирования: {year}\n'
-              f'Всего инвестировано: {rez[0]}\n'
-              f'Конечная стоимость портфеля: {rez[1]:.2f}\n'
-              f'Остаток денег на брокерском счете: {rez[2]:.2f}\n'
-              f'Количество бумаг в портфеле: {rez[3]}\n'
-              f'Текущая стоимость одной бумаги: {rez[4]:.2f}\n'
-              f'Доход: {rez[1] - rez[0] + rez[2]:.2f}\n'
-              f'---------------------------------------------')
+        dohod = rez[1] - rez[0] + rez[2]
+        # print(f'Год начала инвестирования: {year}\n'
+        #       f'Всего инвестировано: {rez[0]}\n'
+        #       f'Конечная стоимость портфеля: {rez[1]:.2f}\n'
+        #       f'Остаток денег на брокерском счете: {rez[2]:.2f}\n'
+        #       f'Количество бумаг в портфеле: {rez[3]}\n'
+        #       f'Текущая стоимость одной бумаги: {rez[4]:.2f}\n'
+        #       f'Доход: {dohod:.2f}\n'
+        #       f'---------------------------------------------')
 
+        # new_row = {'Год начала': year, 'Инвестировано': rez[0], 'Стоим портфеля': rez[1], 'Деньги': rez[2],
+        #            'Бумаги': rez[3], 'Стоимость бумаги': rez[4], 'Доход': dohod}
+
+        new_row = {'Год начала': str(year), 'Инвестировано': rez[0], 'Стоим портфеля': rez[1], 'Доход': dohod}
+
+        # append row to the dataframe
+        df_rez_ticker = df_rez_ticker.append(new_row, ignore_index=True)
+
+    # Сброс ограничений на число столбцов
+    # pd.set_option('display.max_columns', None)
+    # print(df_rez)
+
+    index = df_rez_ticker['Год начала']
+    values = df_rez_ticker['Доход']
+    plt.title(f'Доход за {year_invest} лет ежемесячного инвестирования по ${increment} в инструмент {ticker}')
+    plt.bar(index, values, label='Доход')
+    plt.xticks(index, df_rez_ticker['Год начала'])
+    plt.xlabel("Год начала инвестирования")
+    plt.ylabel("Доход в $")
+    plt.legend(loc=2)
+    plt.show()
