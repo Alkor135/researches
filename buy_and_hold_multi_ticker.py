@@ -1,7 +1,6 @@
 from datetime import date
 import pandas as pd
 import yfinance as yf
-import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -18,8 +17,6 @@ class Bar:
 
 def run(df, start_date, end_date, increment, date_increment, fees):
     """ Основная функция """
-    # df = yf.download(ticker)  # Загрузка данных с Yahoo Finance
-    # df = df.drop(columns=['Adj Close', 'Volume'])  # Удаляем ненужные колонки
     df = df[start_date:end_date]
     # print(df)
     cur_bar = Bar()
@@ -66,7 +63,8 @@ if __name__ == '__main__':
     # BRK-B IJH SPY AAPL
     df_rez = pd.DataFrame()
     # ticker_lst = ['AAPL', 'SPY', 'BRK-B', 'IJH']  # Тикер финансовых инструментов как он отображается на Yahoo Finance
-    ticker_lst = ['SPY', 'BRK-B', 'IJH', 'QQQ']  # Тикер финансовых инструментов как он отображается на Yahoo Finance
+    # ticker_lst = ['AAPL', 'BRK-B', 'IJH', 'QQQ']  # Тикер финансовых инструментов как он отображается на Yahoo Finance
+    ticker_lst = ['AAPL', 'MSFT', 'NVDA', 'GOOGL']  # Тикер финансовых инструментов как он отображается на Yahoo Finance
     increment: int = 100  # Сумма ежемесячного инвестирования
     date_increment: int = 15  # Дата пополнения(число месяца)
     year_invest: int = 10  # Количество лет инвестирования
