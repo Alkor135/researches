@@ -1,7 +1,6 @@
 from datetime import date
 import pandas as pd
 import yfinance as yf
-import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -18,20 +17,19 @@ class Bar:
 
 def run(df, start_date, end_date, increment, date_increment, fees):
     """ Основная функция """
-    # df = yf.download(ticker)  # Загрузка данных с Yahoo Finance
-    # df = df.drop(columns=['Adj Close', 'Volume'])  # Удаляем ненужные колонки
     df = df[start_date:end_date]
-    # print(df)
+
     cur_bar = Bar()
     prev_bar = Bar()
-    # print(cur_bar.month, prev_bar.close)
+
     increment_is_completed = False  # Приращение депо в этом месяце (False-не было, True-было)
     depo = 0  # Брокерский счет в валюте
     sum_depo = 0  # Общая сумма инвестирования (переведено на брокерский счет)
-    portfolio = 0  # Количество бумаг
+    portfolio = 0  # Количество бумаг в портфеле
 
     # Перебор строк DF, как приход нового бара
-    for row in df.itertuples():  # Перебор строк DF
+    for row in df.itertuples():  # Перебор строк DF (аналог появления нового бара)
+        # Обновляем информацию текущего бара
         cur_bar.day = date.timetuple(row[0])[2]
         cur_bar.month = date.timetuple(row[0])[1]
         cur_bar.year = date.timetuple(row[0])[0]
@@ -41,16 +39,17 @@ def run(df, start_date, end_date, increment, date_increment, fees):
         cur_bar.close = row[4]
 
         if cur_bar.month != prev_bar.month:  # Если месяц предыдущего бара не равен месяцу текущего бара
-            increment_is_completed = False
+            increment_is_completed = False  # Признак инвестирования в текущем месяце в False
         elif cur_bar.month == prev_bar.month and not increment_is_completed and cur_bar.day >= date_increment:
-            depo += increment
-            sum_depo += increment
-            increment_is_completed = True
+            depo += increment  # Увеличение брокерского счета на сумму ежемесячных инвестиций
+            sum_depo += increment  # Увеличение общей суммы инвестиций
+            increment_is_completed = True  # Признак инвестирования в текущем месяце в True
 
-        while cur_bar.open + cur_bar.open * fees < depo:
-            depo -= cur_bar.open + cur_bar.open * fees
-            portfolio += 1
+        while cur_bar.open + cur_bar.open * fees < depo:  # Если сумма на счете позволяет купить фин. инструмент
+            depo -= cur_bar.open + cur_bar.open * fees  # Списываем с брокерского счета сумму на покупку
+            portfolio += 1  # Увеличиваем количество бумаг в портфеле
 
+        # Обновление информации предыдущего бара
         prev_bar.day = cur_bar.day
         prev_bar.month = cur_bar.month
         prev_bar.year = cur_bar.year
@@ -63,8 +62,8 @@ def run(df, start_date, end_date, increment, date_increment, fees):
 
 
 if __name__ == '__main__':
-    # BRK-B IJH SPY AAPL
-    ticker = 'SPY'  # Тикер финансового инструмента как он отображается на Yahoo Finance
+    # BRK-B IJH SPY AAPL QQQ
+    ticker = 'QQQ'  # Тикер финансового инструмента как он отображается на Yahoo Finance
     increment: int = 100  # Сумма ежемесячного инвестирования
     date_increment: int = 15  # Дата пополнения(число месяца)
     year_invest: int = 10  # Количество лет инвестирования
@@ -94,15 +93,19 @@ if __name__ == '__main__':
         # new_row = {'Год начала': year, 'Инвестировано': rez[0], 'Стоим портфеля': rez[1], 'Деньги': rez[2],
         #            'Бумаги': rez[3], 'Стоимость бумаги': rez[4], 'Доход': dohod}
 
-        new_row = {'Год начала': str(year), 'Инвестировано': rez[0], 'Стоим портфеля': rez[1], 'Доход': dohod}
+        new_row = {'Год начала': str(year),
+                   'Инвестировано': round(rez[0], 2),
+                   'Стоим портфеля': round(rez[1], 2),
+                   'Доход': round(dohod, 2)
+                   }
 
         # append row to the dataframe
         df_rez_ticker = df_rez_ticker.append(new_row, ignore_index=True)
 
-    # Сброс ограничений на число столбцов
-    # pd.set_option('display.max_columns', None)
-    # print(df_rez)
+    pd.set_option('display.max_columns', None)  # Сброс ограничений на число столбцов
+    print(df_rez_ticker)
 
+    # Построение графика
     index = df_rez_ticker['Год начала']
     values = df_rez_ticker['Доход']
     plt.title(f'Доход за {year_invest} лет ежемесячного инвестирования по ${increment} в инструмент {ticker}')
