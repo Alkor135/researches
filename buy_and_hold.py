@@ -103,14 +103,14 @@ if __name__ == '__main__':
         df_rez_ticker = df_rez_ticker.append(new_row, ignore_index=True)
 
     pd.set_option('display.max_columns', None)  # Сброс ограничений на число столбцов
-    print(df_rez_ticker)
+    print(df_rez_ticker)  # Вывод таблицы результата
 
     # Построение графика
     index = df_rez_ticker['Год начала']
     values = df_rez_ticker['Доход']
     plt.title(f'Доход за {year_invest} лет ежемесячного инвестирования по ${increment} в инструмент {ticker}')
     plt.bar(index, values, label='Доход')
-    plt.xticks(index, df_rez_ticker['Год начала'])
+    plt.xticks(index, df_rez_ticker['Год начала'].apply(int), rotation=45)  # Подписи к оси Х переведены в int и повернуты
     plt.xlabel("Год начала инвестирования")
     plt.ylabel("Доход в $")
     plt.legend(loc=2)

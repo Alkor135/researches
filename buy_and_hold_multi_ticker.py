@@ -1,4 +1,6 @@
 from datetime import date
+
+import numpy as np
 import pandas as pd
 import yfinance as yf
 import matplotlib.pyplot as plt
@@ -18,10 +20,8 @@ class Bar:
 def run(df, start_date, end_date, increment, date_increment, fees):
     """ Основная функция """
     df = df[start_date:end_date]
-    # print(df)
     cur_bar = Bar()
     prev_bar = Bar()
-    # print(cur_bar.month, prev_bar.close)
     increment_is_completed = False  # Приращение депо в этом месяце (False-не было, True-было)
     depo = 0  # Брокерский счет в валюте
     sum_depo = 0  # Общая сумма инвестирования (переведено на брокерский счет)
@@ -81,17 +81,18 @@ if __name__ == '__main__':
 
             rez = run(df_ticker, start_date, end_date, increment, date_increment, fees)
 
-            dohod = rez[1] - rez[0] + rez[2]
+            dohod = round(rez[1] - rez[0] + rez[2], 2)
 
-            new_row = {'Год начала': year, f'Доход {ticker}': dohod}
+            new_row = {'Год начала': int(year), f'Доход {ticker}': dohod}
             df_rez_ticker = df_rez_ticker.append(new_row, ignore_index=True)
 
-        # print(df_rez)
-        # print(df_rez_ticker)
         if len(df_rez) == 0:
             df_rez = df_rez_ticker
         else:
             df_rez = pd.merge(df_rez, df_rez_ticker)
+
+    df_change_type = df_rez.astype({'Год начала': np.int64})  # Изменение типа, для печати без дробной части
+    print(df_change_type)  # Печать результирующей таблицы
 
     index = df_rez['Год начала']
     values0 = df_rez[f'Доход {ticker_lst[0]}']
