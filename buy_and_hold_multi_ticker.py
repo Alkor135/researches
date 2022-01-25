@@ -104,7 +104,7 @@ if __name__ == '__main__':
     plt.bar(index - 0.2, values1, bw, label=f'Доход {ticker_lst[1]}')
     plt.bar(index, values2, bw, label=f'Доход {ticker_lst[2]}')
     plt.bar(index + 0.2, values3, bw, label=f'Доход {ticker_lst[3]}')
-    plt.xticks(index, df_rez['Год начала'])
+    plt.xticks(index, df_rez['Год начала'].apply(int), rotation=45)  # Подписи к оси Х переведены в int и повернуты
     plt.xlabel("Год начала инвестирования")
     plt.ylabel("Доход в $")
     plt.legend(loc=2)
