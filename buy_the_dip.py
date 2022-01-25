@@ -1,5 +1,6 @@
 from datetime import date
 import pandas as pd
+import talib
 import yfinance as yf
 import matplotlib.pyplot as plt
 
@@ -10,9 +11,34 @@ class Bar:
         self.month = 0
         self.day = 0
         self.open = 0
-        self.high = 0
-        self.low = 0
         self.close = 0
+        self.std1 = 0
+        self.std2 = 0
+        self.std3 = 0
+
+
+def prepare_df(ticker, timeperiod):
+    """ Функция подготовки данных """
+    df = yf.download(ticker)  # Загрузка данных с Yahoo Finance
+    df = df.drop(columns=['Adj Close', 'Volume', 'High', 'Low'])  # Удаляем ненужные колонки
+
+    # Создание series индикатора LINEARREG по данным из dataframe
+    df[f'lr{timeperiod}'] = talib.LINEARREG(df['Close'], timeperiod=timeperiod)
+
+    # Создание series индикатора STDDEV по данным из dataframe
+    df['stddev1'] = talib.STDDEV(df['Close'], timeperiod=timeperiod, nbdev=1)
+    df['stddev2'] = talib.STDDEV(df['Close'], timeperiod=timeperiod, nbdev=2)
+    df['stddev3'] = talib.STDDEV(df['Close'], timeperiod=timeperiod, nbdev=3)
+
+    df = df.dropna()  # Убираем данные с пустыми значениями
+
+    # Создаем колонки со значениями -1/-2/-3 STD
+    df = df.assign(STD1=lambda x: x[f'lr{timeperiod}'] - x['stddev1'],
+                   STD2=lambda x: x[f'lr{timeperiod}'] - x['stddev2'],
+                   STD3=lambda x: x[f'lr{timeperiod}'] - x['stddev3'])
+
+    df = df.drop(columns=[f'lr{timeperiod}', 'stddev1', 'stddev2', 'stddev3'])  # Удаляем ненужные колонки
+    return df
 
 
 def run(df, start_date, end_date, increment, date_increment, fees):
@@ -34,10 +60,12 @@ def run(df, start_date, end_date, increment, date_increment, fees):
         cur_bar.month = date.timetuple(row[0])[1]
         cur_bar.year = date.timetuple(row[0])[0]
         cur_bar.open = row[1]
-        cur_bar.high = row[2]
-        cur_bar.low = row[3]
-        cur_bar.close = row[4]
+        cur_bar.close = row[2]
+        cur_bar.std1 = row[3]
+        cur_bar.std2 = row[4]
+        cur_bar.std3 = row[4]
 
+        # Приращение depo
         if cur_bar.month != prev_bar.month:  # Если месяц предыдущего бара не равен месяцу текущего бара
             increment_is_completed = False  # Признак инвестирования в текущем месяце в False
         elif cur_bar.month == prev_bar.month and not increment_is_completed and cur_bar.day >= date_increment:
@@ -45,7 +73,9 @@ def run(df, start_date, end_date, increment, date_increment, fees):
             sum_depo += increment  # Увеличение общей суммы инвестиций
             increment_is_completed = True  # Признак инвестирования в текущем месяце в True
 
-        while cur_bar.open + cur_bar.open * fees < depo:  # Если сумма на счете позволяет купить фин. инструмент
+        # Покупка
+        while cur_bar.open + cur_bar.open * fees < depo and \
+                cur_bar.open < cur_bar.std1:  # Условия покупки
             depo -= cur_bar.open + cur_bar.open * fees  # Списываем с брокерского счета сумму на покупку
             portfolio += 1  # Увеличиваем количество бумаг в портфеле
 
@@ -54,23 +84,37 @@ def run(df, start_date, end_date, increment, date_increment, fees):
         prev_bar.month = cur_bar.month
         prev_bar.year = cur_bar.year
         prev_bar.open = cur_bar.open
-        prev_bar.high = cur_bar.high
-        prev_bar.low = cur_bar.low
         prev_bar.close = cur_bar.close
+        prev_bar.std1 = cur_bar.std1
+        prev_bar.std2 = cur_bar.std2
+        prev_bar.std3 = cur_bar.std3
 
     return sum_depo, portfolio * cur_bar.close, depo, portfolio, cur_bar.close
 
 
 if __name__ == '__main__':
-    # BRK-B IJH SPY AAPL QQQ
-    ticker = 'QQQ'  # Тикер финансового инструмента как он отображается на Yahoo Finance
+    # BRK-B IJH SPY AAPL QQQ NVDA TSLA
+    ticker: str = 'QQQ'  # Тикер финансового инструмента как он отображается на Yahoo Finance
     increment: int = 1000  # Сумма ежемесячного инвестирования
     date_increment: int = 15  # Дата пополнения(число месяца)
+    start_date: date = date(1993, 1, 1)  # Дата старта инвестирования(год, месяц, число)
     year_invest: int = 10  # Количество лет инвестирования
+    timeperiod: int = 200  # Период для расчета индикаторов (линейная регрессия, стандартное отклонение)
     fees = 0.0006  # 0.05% комиссия брокера ВТБ + 0.01% комиссия биржи
 
-    df_ticker = yf.download(ticker)  # Загрузка данных с Yahoo Finance
-    df_ticker = df_ticker.drop(columns=['Adj Close', 'Volume'])  # Удаляем ненужные колонки
+    end_date = date(start_date.year + year_invest, start_date.month, start_date.day)
+
+    df = prepare_df(ticker, timeperiod)
+
+    pd.set_option('display.max_columns', None)  # Сброс ограничений на число столбцов
+    print(df)
+
+    # plt.plot(df['Close'], label=ticker)
+    # plt.plot(df['STD1'], label='STD1')
+    # plt.plot(df['STD2'], label='STD2')
+    # plt.plot(df['STD3'], label='STD3')
+    # plt.legend(loc='upper left')
+    # plt.show()
 
     df_rez_ticker = pd.DataFrame()
 
@@ -78,20 +122,9 @@ if __name__ == '__main__':
         start_date: date = date(year, 1, 1)  # Дата старта инвестирования(год, месяц, число)
         end_date = date(start_date.year + year_invest, start_date.month, start_date.day)
 
-        rez = run(df_ticker, start_date, end_date, increment, date_increment, fees)
+        rez = run(df, start_date, end_date, increment, date_increment, fees)
 
         dohod = rez[1] - rez[0] + rez[2]
-        # print(f'Год начала инвестирования: {year}\n'
-        #       f'Всего инвестировано: {rez[0]}\n'
-        #       f'Конечная стоимость портфеля: {rez[1]:.2f}\n'
-        #       f'Остаток денег на брокерском счете: {rez[2]:.2f}\n'
-        #       f'Количество бумаг в портфеле: {rez[3]}\n'
-        #       f'Текущая стоимость одной бумаги: {rez[4]:.2f}\n'
-        #       f'Доход: {dohod:.2f}\n'
-        #       f'---------------------------------------------')
-
-        # new_row = {'Год начала': year, 'Инвестировано': rez[0], 'Стоим портфеля': rez[1], 'Деньги': rez[2],
-        #            'Бумаги': rez[3], 'Стоимость бумаги': rez[4], 'Доход': dohod}
 
         new_row = {'Год начала': str(year),
                    'Инвестировано': round(rez[0], 2),
