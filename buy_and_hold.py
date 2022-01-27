@@ -64,7 +64,7 @@ def run(df, start_date, end_date, increment, date_increment, fees):
 if __name__ == '__main__':
     # BRK-B IJH SPY AAPL QQQ
     ticker = 'QQQ'  # Тикер финансового инструмента как он отображается на Yahoo Finance
-    increment: int = 1000  # Сумма ежемесячного инвестирования
+    increment: int = 100  # Сумма ежемесячного инвестирования
     date_increment: int = 15  # Дата пополнения(число месяца)
     year_invest: int = 10  # Количество лет инвестирования
     fees = 0.0006  # 0.05% комиссия брокера ВТБ + 0.01% комиссия биржи
